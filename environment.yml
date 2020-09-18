@@ -1,0 +1,15 @@
+name: AD
+channels:
+  - conda-forge
+dependencies:
+- pandas
+- scikit-learn
+- matplotlib
+- numpy
+- seaborn
+- cookiecutter
+- git
+- jupyterlab
+- jupyter_contrib_nbextensions
+- flask
+
