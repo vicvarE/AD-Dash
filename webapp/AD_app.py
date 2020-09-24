@@ -7,12 +7,16 @@ Created on Wed Sep 23 11:25:47 2020
 import base64
 import datetime
 import io
+# import xlsxwriter
+# from flask import send_file
+# import flask 
 
 import dash
 from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 import dash_table
 from src.predict_model import feat_selection, predict_AD
@@ -20,16 +24,6 @@ from src.predict_model import feat_selection, predict_AD
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-# assume you have a "long-form" data frame
-# see https://plotly.com/python/px-arguments/ for more options
-df = pd.DataFrame({
-    "Fruit": ["Apples", "Oranges", "Bananas", "Apples", "Oranges", "Bananas"],
-    "Amount": [4, 1, 2, 2, 4, 5],
-    "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal"]
-})
-
-fig = px.bar(df, x="Fruit", y="Amount", color="City", barmode="group")
 
 app.layout = html.Div(children=[
     html.H1(children='Dash-AD'),
@@ -57,11 +51,7 @@ app.layout = html.Div(children=[
         multiple=False
     ),
     html.Div(id='output-data-upload'),
-    
-    dcc.Graph(
-        id='example-graph',
-        figure=fig
-        )
+
 ])
 
 
@@ -92,7 +82,8 @@ def parse_contents(contents, filename, date):
           {'label': 'Complete Data Table', 'value': 'Complete'},
           ], value='Condensed',
           labelStyle={'display': 'inline-block', 'width': '20%', 'margin':'auto', 'marginTop': 15, 'paddingLeft': 15},
-          id='radio-button-table'
+          id='radio-button-table',          
+
           ),
         html.Div([
         html.H5(filename),
@@ -103,20 +94,30 @@ def parse_contents(contents, filename, date):
             columns=[{'name': i, 'id': i} for i in predictions.columns],
             editable=True,
             id='data-table',
-            fixed_rows={'headers': True},
+            style_data_conditional=[
+                {
+            'if': {
+                'filter_query': '{Include} = Yes',                
+            },
+            'backgroundColor': 'darkseagreen',            
+            }],
+            
             style_table={
-            'height': 300,
-            'overflowY': 'scroll',
+            'height': 400,
+            #'overflowY': 'scroll',
             'width': 400
             },
-                style_cell={
+            style_cell={
             'whiteSpace': 'normal',
             'height': 'auto',
             },
+            style_filter = {'height':'25px'},    
             filter_action="native",
+            fixed_rows={'headers': True},
             sort_action="native",
             page_action='native',
             sort_mode="multi",
+            
         ),
         
         html.Hr(),  # horizontal line
@@ -126,6 +127,12 @@ def parse_contents(contents, filename, date):
         html.Div([
             html.A(html.Button('Download Data', id='download-button'), id='download-link')
         ]),
+        #graphs
+        dcc.Graph(
+            id='example-graph',
+            figure=px.bar(predictions.groupby('Include').count(),color_discrete_sequence=px.colors.qualitative.Antique)
+           
+            )
         ]),
     ])
 
@@ -141,6 +148,7 @@ def update_output(list_of_contents, list_of_names, list_of_dates):
             parse_contents(list_of_contents, list_of_names, list_of_dates)]
         return children
 
+# Callback for  download
 
 # Callback and update data table columns
 # @app.callback(Output('data-table', 'columns'),
