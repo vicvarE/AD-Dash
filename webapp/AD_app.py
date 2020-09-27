@@ -7,29 +7,39 @@ Created on Wed Sep 23 11:25:47 2020
 import base64
 import datetime
 import io
-# import xlsxwriter
-# from flask import send_file
-# import flask 
+from urllib.parse import quote
 
 import dash
 from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 import dash_table
 from src.predict_model import feat_selection, predict_AD
 
+dff = pd.read_csv('data/raw/dummy.csv')
+csv_string = dff.to_csv(encoding='utf-8', index=False)
+csv_string = "data:text/csv;charset=utf-8," + quote(csv_string)
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True, prevent_initial_callbacks=True)
 
 app.layout = html.Div(children=[
     html.H1(children='Dash-AD'),
     html.Div(children='''
         A screening tool for Alzheimer's Disease
     '''),
+    html.P(['Upload your .csv or .xlm below.', html.Br(), 
+            'Use the following template:']),
+    html.A(
+    'Download Template',
+    id='download-link',
+    download="template.csv",
+    href=csv_string,
+    target="_blank"
+    ),
     
     dcc.Upload(
         id='upload-data',
@@ -50,11 +60,11 @@ app.layout = html.Div(children=[
         # Allow multiple files to be uploaded
         multiple=False
     ),
-    html.Div(id='output-data-upload'),
-
+  
 ])
 
 
+     
 def parse_contents(contents, filename, date):
     content_type, content_string = contents.split(',')
 
@@ -73,17 +83,35 @@ def parse_contents(contents, filename, date):
             'There was an error processing this file.'
         ])
     #transform user df with load features and fit model
-    df_subset=feat_selection(df, 'models/01prelim_features.sav')
+    copy_df=df.copy()
+    df_subset=feat_selection(copy_df, 'models/01prelim_features.sav')
     predictions=predict_AD(df_subset, 'models/01prelim_model.sav')
 
     return html.Div([
+        html.Div('''Select model threshold. Higher values will include more patient's into the pool, but increases false negatives. Default value is optimized for tradeoff.'''),
+        dcc.Slider(
+        id='Model precision',
+        min=0,
+        max=100,
+        step=1,
+        value=45,
+           marks={
+        0: '0',
+        25: '25',
+        50: '50',
+        75: '75',
+        100: '100'
+        },
+       tooltip = { 'always_visible': True, 'placement':'bottom' }
+        ),
+        html.Div(id='slider-output-container'),
+        
         dcc.RadioItems(options=[
           {'label': 'Condensed Data Table', 'value': 'Condensed'},
           {'label': 'Complete Data Table', 'value': 'Complete'},
           ], value='Condensed',
           labelStyle={'display': 'inline-block', 'width': '20%', 'margin':'auto', 'marginTop': 15, 'paddingLeft': 15},
-          id='radio-button-table',          
-
+          id='radio-button-table',        
           ),
         html.Div([
         html.H5(filename),
@@ -117,16 +145,14 @@ def parse_contents(contents, filename, date):
             sort_action="native",
             page_action='native',
             sort_mode="multi",
+            export_columns='all',
+            export_format='csv',
+            export_headers ='names',
             
         ),
         
         html.Hr(),  # horizontal line
 
-
-        # Download Button
-        html.Div([
-            html.A(html.Button('Download Data', id='download-button'), id='download-link')
-        ]),
         #graphs
         dcc.Graph(
             id='example-graph',
@@ -136,7 +162,7 @@ def parse_contents(contents, filename, date):
         ]),
     ])
 
-
+                 
 @app.callback(Output('output-data-upload', 'children'),
               [Input('upload-data', 'contents')],
               [State('upload-data', 'filename'),
@@ -148,9 +174,9 @@ def update_output(list_of_contents, list_of_names, list_of_dates):
             parse_contents(list_of_contents, list_of_names, list_of_dates)]
         return children
 
-# Callback for  download
 
-# Callback and update data table columns
+
+
 # @app.callback(Output('data-table', 'columns'),
 #     [Input('radio-button-table', 'value')])
 # def update_columns(value):
