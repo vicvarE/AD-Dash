@@ -12,14 +12,14 @@ flask==1.1.2
 flask-caching==1.9.0
 flask-compress==1.5.0
 gunicorn==20.0.4
-numpy==1.19.1=py37h7cee19a_2
-pandas==1.1.1=py37h1834ac0_0
-pickleshare==0.7.5=py37_1001
-pip==20.2.2=py37_0
-plotly==4.10.0=py_0
-scikit-learn==0.23.2=py37hdc70db3_0
-scikit-survival==0.13.1=py37he350917_0
-scipy==1.5.2==py37h9439919_0
+numpy==1.19.1
+pandas==1.1.1
+pickleshare==0.7.5
+pip==20.2.2
+plotly==4.10.0
+scikit-learn==0.23.2
+scikit-survival==0.13.1
+scipy==1.5.2
 urllib3==1.25.10
-yaml==0.2.5=he774522_0
+yaml==0.2.5
 
