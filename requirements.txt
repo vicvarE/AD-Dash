@@ -1,5 +1,4 @@
 
-BorutaShap==1.0.13
 dash @ file:///tmp/build/80754af9/dash_1600293457201/work
 dash-core-components==1.12.1
 dash-extensions==0.0.31
