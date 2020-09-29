@@ -7,6 +7,7 @@ Created on Wed Sep 23 11:25:47 2020
 import base64
 import datetime
 import io
+import os
 from urllib.parse import quote
 
 import dash
@@ -25,6 +26,8 @@ csv_string = "data:text/csv;charset=utf-8," + quote(csv_string)
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True, prevent_initial_callbacks=True)
+
+server = app.server
 
 app.layout = html.Div(children=[
     html.H1(children='Dash-AD'),
