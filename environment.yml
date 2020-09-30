@@ -7,9 +7,10 @@ dependencies:
 - matplotlib
 - numpy
 - seaborn
-- cookiecutter
 - git
 - jupyterlab
 - jupyter_contrib_nbextensions
 - flask
+- dash
+- gunicorn
 
