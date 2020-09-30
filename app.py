@@ -14,9 +14,9 @@ import dash
 from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
 import plotly.express as px
 import pandas as pd
-import dash_table
 from src.predict_model import feat_selection, predict_AD
 
 dff = pd.read_csv('data/raw/dummy.csv')
@@ -25,7 +25,7 @@ csv_string = "data:text/csv;charset=utf-8," + quote(csv_string)
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True, prevent_initial_callbacks=True)
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)#, suppress_callback_exceptions=True, prevent_initial_callbacks=True)
 
 server = app.server
 
@@ -63,9 +63,8 @@ app.layout = html.Div(children=[
         # Allow multiple files to be uploaded
         multiple=False
     ),
-  
+    html.Div(id='output-data-upload'),  
 ])
-
 
      
 def parse_contents(contents, filename, date):
@@ -77,6 +76,7 @@ def parse_contents(contents, filename, date):
             # Assume that the user uploaded a CSV file
             df = pd.read_csv(
                 io.StringIO(decoded.decode('utf-8')))
+            
         elif 'xls' in filename:
             # Assume that the user uploaded an excel file
             df = pd.read_excel(io.BytesIO(decoded))
@@ -171,7 +171,7 @@ def parse_contents(contents, filename, date):
               [State('upload-data', 'filename'),
                 State('upload-data', 'last_modified')])
 
-def update_output(list_of_contents, list_of_names, list_of_dates):
+def update_output(list_of_contents, list_of_names, list_of_dates):    
     if list_of_contents is not None: 
         children = [
             parse_contents(list_of_contents, list_of_names, list_of_dates)]
