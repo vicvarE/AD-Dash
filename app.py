@@ -5,9 +5,7 @@ Created on Wed Sep 23 11:25:47 2020
 @author: viceva
 """
 import base64
-import datetime
 import io
-import os
 from urllib.parse import quote
 
 import dash
@@ -17,7 +15,7 @@ import dash_html_components as html
 import dash_table
 import plotly.express as px
 import pandas as pd
-from src.predict_model import feat_selection, predict_AD, feature_check
+from src.predict_model import feat_selection, predict_AD, feature_check, which_tests,predict_survival
 
 dff = pd.read_csv('data/raw/dummy.csv')
 csv_string = dff.to_csv(encoding='utf-8', index=False)
@@ -30,9 +28,9 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_ca
 server = app.server
 
 app.layout = html.Div(children=[
-    html.H1(children='Dash-AD'),
+    html.H1(children='Target AD'),
     html.Div(children='''
-        A screening tool for Alzheimer's Disease
+        A screening tool to focus early clinical trials of Alzheimer's Disease. This tool predicts which mild cognitive impaired patients are most likely to develop Alzheimer's
     '''),
     html.P(['Upload your .csv or .xlm below.', html.Br(), 
             'Use the following template (contains dummy values):']),
@@ -63,6 +61,13 @@ app.layout = html.Div(children=[
         # Allow multiple files to be uploaded
         multiple=False
     ),
+    html.Div(
+    [
+        html.I("Variable coding search"),
+        html.Br(),
+        dcc.Input(id="input1", type="text", placeholder="", debounce=True),
+        html.Div(id="output"),
+    ]),
     
     html.Div([html.Div('''Select model threshold. Lower values will include more patients into the pool, but increases false negatives. Default value is optimized for tradeoff.'''),
     dcc.Slider(
@@ -82,18 +87,66 @@ app.layout = html.Div(children=[
         },
        tooltip = { 'always_visible': False, 'placement':'bottom' }
         ),
+        
         html.Div(id='slider-output-container'),
-        ]),
+        ],style={'marginBottom': 50,'marginTop': 50}),
+    
+    html.Div([html.Div('''Select time to diagnosis (days). It will return the likelihood (0 to 1+) to be diagnosed with Alzheimer's at this timepoint'''),
+    dcc.Slider(
+        id='Time point',
+        min=150,
+        max=550,
+        step=10,
+        value=365,
+           marks={
+        150: '150',
+        250: '250',
+        350: '350',
+        450: '450',
+        550: '550',
+        },
+       tooltip = { 'always_visible': False, 'placement':'bottom' }
+        ),
+        
+        html.Div(id='slider-output-container2'),
+        ],style={'marginBottom': 50,'marginTop': 50}),
+  
     html.Div(id='output-data-upload'),  
-    dcc.Graph(id='example-graph'),
+    
      # Hidden div inside the app that stores the intermediate value
     html.Div(id='intermediate-value', style={'display': 'none'}),
     
 ])
              
-             
+@app.callback(
+    Output("output", "children"),
+    [Input("input1", "value")],
+)
+def update_output(input1):
+    if input1:
+        dd= pd.read_csv('docs/rdd_datadictionary_uds.csv')
+        answer=dd[['ShortDescriptor','AllowableCodes']].loc[dd.VariableName==input1]
+        
+        search_table = html.Div()
+        search_table   = html.Div([
+            dash_table.DataTable(
+            data=answer.to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in answer.columns],
+            style_cell={
+            'whiteSpace': 'normal',
+            'height': 'auto',
+            'maxWidth': 40,
+            
+            },
+            style_table={
+                'width': 800
+                },
+            ),
+            html.Hr()
+            ])
+        return search_table         
 
-def parse_contents(contents, filename,date):
+def parse_contents(contents, filename, date):
     content_type, content_string = contents.split(',')
 
     decoded = base64.b64decode(content_string)
@@ -119,29 +172,45 @@ def parse_contents(contents, filename,date):
 
 
 
-@app.callback(Output('output-data-upload', 'children'),
+@app.callback(Output('intermediate-value', 'children'),               
               [Input('upload-data', 'contents')],
               [State('upload-data', 'filename'),
-               State('upload-data', 'last_modified')])   
+               State('upload-data', 'last_modified')])
 
-def update_table(contents, filename,date):
-    table = html.Div()
+def clean_data(contents, filename,date):
+     if contents:
+         df = parse_contents(contents, filename, date)
+         return df.to_json(orient='split')
 
-    if contents:
-        df = parse_contents(contents, filename, date)
-            #transform user df with load features and fit model
-        copy_df=df.copy()
-        df_subset=feat_selection(copy_df, 'models/01final_features_res.sav')
+
+@app.callback(Output('output-data-upload', 'children'),
+              [Input('intermediate-value', 'children'),
+               Input('Model precision', 'value'),
+               Input('Time point', 'value')])   
+
+def update_table(jsonified_data, slider_value, time_value):
+    
+    if jsonified_data:
+        table = html.Div()
+    
+        dff = pd.read_json(jsonified_data, orient='split')
+        df_subset=feat_selection(dff, 'models/01final_features_res.sav')
         tests_df, model_df=feature_check(df_subset)
-        predictions=predict_AD(model_df, 'models/rf_best.sav')
+        predictions=predict_AD(model_df, 'models/rf_best.sav', slider_value)
+        surv_df=predict_survival(model_df, 'models/surv_model.sav', threshold=time_value)
+        
+        merged_ps=predictions.join(surv_df.set_index('Patient_ID'), on='Patient_ID')
+        merged_ps.loc[merged_ps['Include'] =='No', 'Likely diagnosis'] = 'NaN'
+        
+        needed_tests=which_tests(tests_df)
+        merged_table=pd.concat([merged_ps,needed_tests])
+        merged_table=merged_table.fillna('All completed')
         
         table = html.Div([
-        html.H5(filename),
-        html.H6(datetime.datetime.fromtimestamp(date)),
-
+    
         dash_table.DataTable(
-            data=predictions.to_dict('records'),
-            columns=[{'name': i, 'id': i} for i in predictions.columns],
+            data=merged_table.to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in merged_table.columns],
             editable=True,
             id='data-table',
             style_data_conditional=[
@@ -149,7 +218,13 @@ def update_table(contents, filename,date):
             'if': {
                 'filter_query': '{Include} = Yes',                
             },
-            'backgroundColor': 'darkseagreen',            
+            'backgroundColor': 'rgb(179,226,205)',            
+            },
+            {
+            'if': {
+                'filter_query': '{Include} = tests_needed',                
+            },
+            'backgroundColor': 'rgb(253,205,172)',            
             }],
             
             style_table={
@@ -160,6 +235,8 @@ def update_table(contents, filename,date):
             style_cell={
             'whiteSpace': 'normal',
             'height': 'auto',
+            'minWidth': 70
+
             },
             style_filter = {'height':'25px'},    
             filter_action="native",
@@ -174,40 +251,13 @@ def update_table(contents, filename,date):
         ),
         
         html.Hr(),  # horizontal line
-       
+        dcc.Graph(id='example-graph',
+        figure=px.bar(merged_table[['Patient_ID', 'Include' ]].groupby('Include').count(),color_discrete_sequence=px.colors.qualitative.Pastel2))
         ])
 
-    return table
-
-@app.callback(Output('intermediate-value', 'children'),               
-              [Input('upload-data', 'contents')],
-              [State('upload-data', 'filename'),
-               State('upload-data', 'last_modified')])
-
-def clean_data(contents, filename,date):
-     if contents:
-         df = parse_contents(contents, filename, date)
-         return df.to_json(orient='split')
-
-@app.callback(Output('example-graph', 'figure'),  
-              [Input('intermediate-value', 'children'),
-               Input('Model precision', 'value')])
-# def update_table(jsonified_cleaned_data):
-def update_graph(jsonified_data, slider_value):
-    dff = pd.read_json(jsonified_data, orient='split')
-    df_subset=feat_selection(dff, 'models/01final_features_res.sav')
-    tests_df, model_df=feature_check(df_subset)
-    predictions=predict_AD(model_df, 'models/rf_best.sav', slider_value)
-        
-    figure=px.bar(predictions.groupby('Include').count(),color_discrete_sequence=px.colors.qualitative.Antique)
-
-    return figure
+        return table
 
 
-# def update_table(jsonified_cleaned_data):
-#     dff = pd.read_json(jsonified_cleaned_data, orient='split')
-#     table = create_table(dff)
-#     return table
 
 
 if __name__ == '__main__':
