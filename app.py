@@ -28,46 +28,41 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_ca
 server = app.server
 
 app.layout = html.Div(children=[
-    html.H1(children='Target AD'),
+    html.H1(children='Target AD',style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
     html.Div(children='''
-        A screening tool to focus early clinical trials of Alzheimer's Disease. This tool predicts which mild cognitive impaired patients are most likely to develop Alzheimer's
-    '''),
-    html.P(['Upload your .csv or .xlm below.', html.Br(), 
-            'Use the following template (contains dummy values):']),
+        A screening tool to focus early clinical trials of Alzheimer's Disease. This tool predicts which mild cognitive impaired patients are most likely to develop Alzheimer's.
+    ''',style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center', 'padding': 10}),
+    html.P(['Use the following template to structure your data (contains dummy values):',  html.Br()], style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
     html.A(
     'Download Template',
     id='download-link',
     download="template.csv",
     href=csv_string,
     target="_blank"
-    ),
+    , style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
     
     dcc.Upload(
         id='upload-data',
         children=html.Div([
-            'Drag and Drop or ',
+            'Upload your .csv or .xlm: Drag and Drop or ',
             html.A('Select Files')
         ]),
         style={
-            'width': '100%',
+            'width': '80%',
+            'align-items': 'center', 'justify-content': 'center',
             'height': '60px',
             'lineHeight': '60px',
             'borderWidth': '1px',
             'borderStyle': 'dashed',
             'borderRadius': '5px',
             'textAlign': 'center',
-            'margin': '10px'
+            'margin': '20px' ,
+            'margin-left': '135px',
         },
         # Allow multiple files to be uploaded
         multiple=False
     ),
-    html.Div(
-    [
-        html.I("Variable coding search"),
-        html.Br(),
-        dcc.Input(id="input1", type="text", placeholder="", debounce=True),
-        html.Div(id="output"),
-    ]),
+   
     
     html.Div([html.Div('''Select model threshold. Lower values will include more patients into the pool, but increases false negatives. Default value is optimized for tradeoff.'''),
     dcc.Slider(
@@ -89,9 +84,9 @@ app.layout = html.Div(children=[
         ),
         
         html.Div(id='slider-output-container'),
-        ],style={'marginBottom': 50,'marginTop': 50}),
+        ],style={'marginBottom': 50,'marginTop': 50,'width': '80%', 'margin-left': '135px'}),
     
-    html.Div([html.Div('''Select time to diagnosis (days). It will return the likelihood (0 to 1+) to be diagnosed with Alzheimer's at this timepoint'''),
+    html.Div([html.Div('''Select time to diagnosis (days). It will return the likelihood (0 to 1+) to be diagnosed with Alzheimer's at this timepoint.'''),
     dcc.Slider(
         id='Time point',
         min=150,
@@ -109,9 +104,22 @@ app.layout = html.Div(children=[
         ),
         
         html.Div(id='slider-output-container2'),
-        ],style={'marginBottom': 50,'marginTop': 50}),
+        ],style={'marginBottom': 50,'marginTop': 50, 'width': '80%', 'margin-left': '135px'}),
+          
+                       
+       html.Div(id='output-data-upload',
+     style = {'width': '100%', 'align-items': 'center', 'justify-content': 'center', 'margin-left': '205px'}),  
+       
+             
+       html.Div([
+        html.I(["Variable Lookup:",html.Br(), "Input the name of the variable you want more information about."]),
+        html.Br(),
+        dcc.Input(id="input1", type="text", placeholder="", debounce=True),
+
+        html.Div(id="output", style = {'width': '100%', 'margin': '5px', 'margin-left': '185px'}),
+    ] , style = {'width': '100%', 'align-items': 'center', 'justify-content': 'center','textAlign': 'center'}, className="one column"),
   
-    html.Div(id='output-data-upload'),  
+
     
      # Hidden div inside the app that stores the intermediate value
     html.Div(id='intermediate-value', style={'display': 'none'}),
@@ -142,7 +150,7 @@ def update_output(input1):
                 'width': 800
                 },
             ),
-            html.Hr()
+            #html.Hr()
             ])
         return search_table         
 
@@ -199,16 +207,19 @@ def update_table(jsonified_data, slider_value, time_value):
         predictions=predict_AD(model_df, 'models/rf_best.sav', slider_value)
         surv_df=predict_survival(model_df, 'models/surv_model.sav', threshold=time_value)
         
-        merged_ps=predictions.join(surv_df.set_index('Patient_ID'), on='Patient_ID')
-        merged_ps.loc[merged_ps['Include'] =='No', 'Likely diagnosis'] = 'NaN'
+        merged_ps=predictions.join(surv_df.set_index('Patient ID'), on='Patient ID')
+        merged_ps.loc[merged_ps['Include'] =='No', 'Likely diagnosis'] = 'Not applicable'
         
         needed_tests=which_tests(tests_df)
         merged_table=pd.concat([merged_ps,needed_tests])
         merged_table=merged_table.fillna('All completed')
         
+        figure=px.bar(merged_table[['Patient ID', 'Include' ]].groupby('Include').count(),color_discrete_sequence=px.colors.qualitative.Pastel2)
+        figure.update_layout(showlegend=False)
+        
         table = html.Div([
     
-        dash_table.DataTable(
+        html.Div([dash_table.DataTable(
             data=merged_table.to_dict('records'),
             columns=[{'name': i, 'id': i} for i in merged_table.columns],
             editable=True,
@@ -222,7 +233,7 @@ def update_table(jsonified_data, slider_value, time_value):
             },
             {
             'if': {
-                'filter_query': '{Include} = tests_needed',                
+                'filter_query': '{Include} = `Tests needed`',                
             },
             'backgroundColor': 'rgb(253,205,172)',            
             }],
@@ -235,7 +246,8 @@ def update_table(jsonified_data, slider_value, time_value):
             style_cell={
             'whiteSpace': 'normal',
             'height': 'auto',
-            'minWidth': 70
+            'minWidth': 80,
+            'textAlign': 'left'
 
             },
             style_filter = {'height':'25px'},    
@@ -247,14 +259,17 @@ def update_table(jsonified_data, slider_value, time_value):
             export_columns='all',
             export_format='csv',
             export_headers ='names',
+            ),
+           
             
-        ),
+        ], className="four columns"),
         
-        html.Hr(),  # horizontal line
-        dcc.Graph(id='example-graph',
-        figure=px.bar(merged_table[['Patient_ID', 'Include' ]].groupby('Include').count(),color_discrete_sequence=px.colors.qualitative.Pastel2))
-        ])
 
+        html.Div([dcc.Graph(id='example-graph',
+        figure=figure),
+        ], className="five columns")
+        
+        ], style={ 'margin-bottom':'55px'})
         return table
 
 

@@ -27,17 +27,17 @@ def predict_AD(model_df, model_path, threshold = .5):
     #predictions = load_model.predict(model_df)     
     predicted_proba = load_model.predict_proba(model_df)
     predictions = (predicted_proba [:,1] >= threshold).astype('int')
-    predictions_df=pd.DataFrame({'Patient_ID': model_df.index, 'Include': predictions})
+    predictions_df=pd.DataFrame({'Patient ID': model_df.index, 'Include': predictions})
     predictions_df.Include.replace((1, 0),('Yes', 'No'), inplace=True)
     return predictions_df
 
 def which_tests(tests_df):
     '''Returns df with tests needed'''
     needed_tests=pd.DataFrame(index=tests_df.index)
-    needed_tests['Patient_ID']=tests_df.index
-    needed_tests['Include']= 'tests_needed'
-    needed_tests['Likely diagnosis']= 'NaN'
-    needed_tests['tests_needed'] = tests_df.isna().dot(tests_df.columns+',').str.rstrip(',') 
+    needed_tests['Patient ID']=tests_df.index
+    needed_tests['Include']= 'Tests needed'
+    needed_tests['Likely diagnosis']= 'Not applicable'
+    needed_tests['Tests needed'] = tests_df.isna().dot(tests_df.columns+',').str.rstrip(',') 
 
     return needed_tests
 
@@ -49,7 +49,7 @@ def predict_survival(model_df, model_path, threshold=365):
     time_idx=(np.abs(times - threshold)).argmin()
     predictions = predicted_proba[:,time_idx]
     predictions=predictions.round(2)
-    surv_df=pd.DataFrame({'Patient_ID': model_df.index, 'Likely diagnosis': predictions})
+    surv_df=pd.DataFrame({'Patient ID': model_df.index, 'Likely diagnosis': predictions})
     return surv_df
 
 #testing snippets
