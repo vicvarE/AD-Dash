@@ -30,9 +30,9 @@ server = app.server
 app.layout = html.Div(children=[
     html.H1(children='Target AD',style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
     html.Div(children='''
-        A screening tool to focus early clinical trials of Alzheimer's Disease. This tool predicts which mild cognitive impaired patients are most likely to develop Alzheimer's.
+        A batch screening tool to focus early clinical trials of Alzheimer's Disease. This tool predicts which mild cognitive impaired patients are most likely to develop Alzheimer's
     ''',style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center', 'padding': 10}),
-    html.P(['Use the following template to structure your data (contains dummy values):',  html.Br()], style = {'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
+    html.P(['1) Download the template below to structure your data. The template contains dummy values for you to replace, test names should not be changed. If you are unfamiliar with the test name, use the Variable Lookup search.',  html.Br()], style = {'width': '80%',  'align-items': 'center', 'justify-content': 'center','margin': '20px','margin-left': '135px' ,'display': 'flex'}),
     html.A(
     'Download Template',
     id='download-link',
@@ -44,8 +44,8 @@ app.layout = html.Div(children=[
     dcc.Upload(
         id='upload-data',
         children=html.Div([
-            'Upload your .csv or .xlm: Drag and Drop or ',
-            html.A('Select Files')
+            '2) Upload your .csv or .xlm patient file: Drag and Drop or ',
+            html.A('Select Files'),'. After dropping your file, a table and chart with results will be displayed'
         ]),
         style={
             'width': '80%',
@@ -64,7 +64,7 @@ app.layout = html.Div(children=[
     ),
    
     
-    html.Div([html.Div('''Select model threshold. Lower values will include more patients into the pool, but increases false negatives. Default value is optimized for tradeoff.'''),
+    html.Div([html.Div('''3) OPTIONAL. Select model threshold. Lower values will include more patients into the pool, but increases false negatives. Default value is optimized for tradeoff.'''),
     dcc.Slider(
         id='Model precision',
         min=0.25,
@@ -86,7 +86,7 @@ app.layout = html.Div(children=[
         html.Div(id='slider-output-container'),
         ],style={'marginBottom': 50,'marginTop': 50,'width': '80%', 'margin-left': '135px'}),
     
-    html.Div([html.Div('''Select time to diagnosis (days). It will return the likelihood (0 to 1+) to be diagnosed with Alzheimer's at this timepoint.'''),
+    html.Div([html.Div('''4) Select time from first visit in days. It will update the likelihood (ranging form 0-not very likely to 1-very likely) for a patient to be diagnosed with Alzheimer's by this timepoint.'''),
     dcc.Slider(
         id='Time point',
         min=150,
@@ -112,7 +112,7 @@ app.layout = html.Div(children=[
        
              
        html.Div([
-        html.I(["Variable Lookup:",html.Br(), "Input the name of the variable you want more information about."]),
+        html.I(["Variable Lookup:",html.Br(), "Input the name of the variable you want more information about.A description and accepted values for this test will be displayed"]),
         html.Br(),
         dcc.Input(id="input1", type="text", placeholder="", debounce=True),
 
@@ -217,7 +217,7 @@ def update_table(jsonified_data, slider_value, time_value):
         figure=px.bar(merged_table[['Patient ID', 'Include' ]].groupby('Include').count(),color_discrete_sequence=px.colors.qualitative.Pastel2)
         figure.update_layout(showlegend=False)
         
-        table = html.Div([
+        table = html.Div([html.P('Note: Patients hihlighted in green can be selected for the clinical trial. If Orange, the tests indicated need to be performed before a prediction can be given. The table can be sorted, filtered, modified and downloaded. The distribution is shown in the graph', style = {'width': '70%'}),
     
         html.Div([dash_table.DataTable(
             data=merged_table.to_dict('records'),

@@ -41,19 +41,21 @@ def which_tests(tests_df):
 
     return needed_tests
 
-def predict_survival(model_df, model_path, threshold=365):
+def predict_survival(model_df, model_path, threshold=325):
     '''Returns model predictions'''
     load_model = pickle.load(open(model_path, 'rb'))
-    predicted_proba = load_model.predict_cumulative_hazard_function(model_df, return_array=True)
+    #predicted_proba = load_model.predict_cumulative_hazard_function(model_df, return_array=True)
+    #use survival function which is easier to interpret than hazard
+    predicted_proba = load_model.predict_survival_function(model_df, return_array=True)
     times=load_model.event_times_ 
     time_idx=(np.abs(times - threshold)).argmin()
-    predictions = predicted_proba[:,time_idx]
+    predictions = 1-predicted_proba[:,time_idx]
     predictions=predictions.round(2)
     surv_df=pd.DataFrame({'Patient ID': model_df.index, 'Likely diagnosis': predictions})
     return surv_df
 
 #testing snippets
-# df=pd.read_csv('../data/interim/dummy_test.csv')
+# df=pd.read_csv('../data/processed/test.csv')
 # df_subset=feat_selection(df, '../models/01final_features_res.sav')
 # tests_df, model_df=feature_check(df_subset)
 # predictions=predict_AD(model_df, '../models/rf_grid_search_sub.sav')
