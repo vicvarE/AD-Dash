@@ -1,13 +1,18 @@
-﻿AD
+﻿TARGET AD
 ==============================
 
-AD insight ML
+Insight Project.
+Predicting Alzheimer’s Disease for effective clinical trials. 
+Uses data from NACC https://www.alz.washington.edu/WEB/researcher_home.html
+Predicts from a subset of patients with Mild Cognitive Impairment who is most likely to develop Alzheimer's
+(random forest classifier) and time to diagnosis (random survival forest)
+
 
 Project Organization
 ------------
 
     ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
+    ├── app.py		   <- Where the dash app lives
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
     │   ├── external       <- Data from third party sources.
@@ -15,17 +20,13 @@ Project Organization
     │   ├── processed      <- The final, canonical data sets for modeling.
     │   └── raw            <- The original, immutable data dump.
     │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
+    ├── docs               <- Data dictionaries, manuals, and all other explanatory materials.
     │
     ├── models             <- Trained and serialized models, model predictions, or model summaries
     │
     ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── webapp             <- Where te dashboard lives
+    │                         and a short `_` delimited description, e.g.
+    │                         `1.0_jqp_initial_data_exploration`.
     │           
     │
     ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
@@ -36,7 +37,7 @@ Project Organization
     │   ├── __init__.py    <- Makes src a Python module
     │   
     │
-    └── tox.ini            <- tox file with settings for running tox; see tox.readthedocs.io
+   
 
 
 --------
